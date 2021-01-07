@@ -5,6 +5,8 @@ Eyal Waserman and Sivan Toledo
 
 Blavatnik School of Computer Science, Tel-Aviv University
 
+Paper at https://arxiv.org/abs/2101.00895
+
 ## Absolute Position Error CDFs
 ![](results/performance_comparison.png)
 
