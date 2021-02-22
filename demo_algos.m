@@ -10,6 +10,8 @@ clc;
 d=3;
 tcode = 1e-3;
 
+abc = 'abcdefghijklmnopqrstuvwxyz';
+
 colors = [...
     0.9290, 0.6940, 0.1250;...  % Y
     0.8500, 0.3250, 0.0980;...  % R
@@ -193,7 +195,7 @@ for err_inx = 1:numel(posAssistErrorMags)
         
         title(sprintf('Initial Time Error = %.1f (s)\nInitial Position Error = %.1f (km)\nNum Satellites = %s',...
             clockBiasMag, posAssistErrorMag*1e-3, drop_sats_str));
-        xlabel('Final Position Absolute Error (m)'); ylabel('CDF');
+        xlabel(sprintf('Final Position Absolute Error (m)\n\t(%c)', abc(subplot_inx))); ylabel('CDF');
         xlim([0.5 1e5]); ylim([-0.1 1.1]);
         grid on;
         set(gca,'FontSize', 14);
