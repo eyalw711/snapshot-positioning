@@ -1,4 +1,4 @@
-function [ellHat, bHat, resid, ns, iter_ell] = regularized_mils(ellBar, presumed_time, code_phase_obs, sats, Eph, nBar)
+function [ellHat, bHat, resid, ns, iter_ell, rt] = regularized_mils(ellBar, presumed_time, code_phase_obs, sats, Eph, nBar)
 %REGULARIZED_MILS This function calculates receiver position according to
 % the Regularized Mixed-Integer Least-Squares approach.
 %   ellBar is initial guess for receiver position (assistance)
@@ -10,6 +10,7 @@ function [ellHat, bHat, resid, ns, iter_ell] = regularized_mils(ellBar, presumed
 
 %%% TODO: TRY TO DETECT WHEN INTEGERS STOP UPDATING AND THEN TRY TO SOLVE
 %%% BETTER WITHOUT THE REGULARIZATION.
+tic
 
 N_UNKNOWNS = 4;
 FILTER_LOW_SATS = 1; % TODO!!!
@@ -133,6 +134,6 @@ for it = 1:niter
 end
 
 resid = norm(R); %([A_s; J1/c]*[ellHat; bHat] + [B_s; zeros(N_sats)]*ns - [rhs; zeros(N_sats,1)]);
-    
+rt = toc;
 end
 

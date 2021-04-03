@@ -1,9 +1,13 @@
-function convergence_map_data(csv_path, algo_str, n_steps, max_pos_err_str, max_time_err_str)
+function convergence_map_data(csv_path, algo_str, n_steps, max_pos_err_str, max_time_err_str, input_file)
 %CONVERGENCE_MAP runs the convergence experiment. after done, plot with
 %convergence_processing.m file
 
 rng default
 tcode = 1e-3;
+
+if nargin < 6
+    input_file = 'ubx';
+end
 
 tic
 
@@ -48,7 +52,7 @@ try
     last_percent = ceil(n_curr*100/n_lines_full_file);
     
     waitbar(last_percent/100, f, 'generating epochs input');
-    s_input = gen_input('ubx');
+    s_input = gen_input(input_file);
     
     waitbar(last_percent/100, f, sprintf('done %d%%', last_percent));
     
@@ -164,7 +168,7 @@ end
         if strcmp(type_str, 'ubx')
             s_out.epochs = ubx_reader_codephase('inputs/MEASX-VESPER-1460.txt');
         elseif strcmp(type_str, 'tag')
-            epochs = load('inputs/snaps_epochs_1460.mat');
+            epochs = load('inputs/snaps_epochs.mat');
             s_out.epochs = epochs.epochs;
         else
             error('invalid input type');

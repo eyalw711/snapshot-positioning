@@ -6,9 +6,11 @@
 
 clear all;
 clc;
+figure; clf;
 
 d=3;
 tcode = 1e-3;
+input_file = 'ubx'; % choose from 'ubx' or 'tag'
 
 abc = 'abcdefghijklmnopqrstuvwxyz';
 
@@ -19,32 +21,35 @@ colors = [...
     ];
 
 % errors
-posAssistErrorMags = [20e3 150e3];
-clockBiasMags = [20 150];
+posAssistErrorMags = [20e3];
+clockBiasMags = [20];
 assert(numel(posAssistErrorMags) == numel(clockBiasMags),...
     'must supply same error vectors of same length');
 
-% inputs database
+switch input_file
+    case 'ubx'
+        scenario_o_file = 'inputs/MEASX-VESPER-1460.txt';  % inputs database: may 25 2020 ublocks observations on university roof
+        epochs = ubx_reader_codephase(scenario_o_file); % open ubx observation file
+    case 'tag'
+        epochs_file = 'inputs/snaps_epochs.mat';
+        load(epochs_file); % load epochs
+end
+
 scenario_n_file = 'inputs/bshm1460.20n';           % may 25 2020 ephemeris
-scenario_o_file = 'inputs/MEASX-VESPER-1460.txt';  % may 25 2020 ublocks observations on university roof
 
 % ground truth
 gt_ecef =  [4440082.76; 3086578.96; 3371015.61];   % receiver ground truth position
 gt_lla = ecef2lla(gt_ecef');                       % receiver ground truth position in LLA format
 
-figure; clf;
-
 % Read RINEX ephemerides file and convert to internal Matlab format
 rinexe(scenario_n_file, 'eph.dat');
 Eph = get_eph('eph.dat');
 
-% open ubx observation file
-epochs = ubx_reader_codephase(scenario_o_file);
 n_epochs = numel(epochs);
 
 algo_pos_errs = zeros(n_epochs, 3);
 
-drop_sats_vec = [-1 5 4];
+drop_sats_vec = [-1];
 
 subplot_inx = 0;
 for err_inx = 1:numel(posAssistErrorMags)
@@ -89,6 +94,7 @@ for err_inx = 1:numel(posAssistErrorMags)
             
             fail_epochs = false(n_epochs, 1);
             
+            rts = [];
             rng(711); % seed randomness
             
             for ne = 1:n_epochs
@@ -124,7 +130,7 @@ for err_inx = 1:numel(posAssistErrorMags)
                     [~, ~, satspos] = model(ellBar, tDhat, sats1, Eph);             % just for improving transmit times
                     [elevs, ~] = satellite_elevations(ellBar, satspos);
                     %                 [~, keep_sats_inx] = maxk(elevs, drop_sats);
-                    keep_sats_inx = randsample(numel(sats1), drop_sats);
+                    keep_sats_inx = randsample(numel(sats1), min(drop_sats, numel(sats1)));
                     snapshot_codephases_obs = snapshot_codephases_obs(keep_sats_inx);
                     snapshot_doppler_obs = snapshot_doppler_obs(keep_sats_inx);
                     sats1 = sats1(keep_sats_inx);
@@ -146,11 +152,11 @@ for err_inx = 1:numel(posAssistErrorMags)
                 try
                     switch methods{method_inx}
                         case 'reg_dop_mils'
-                            [ellHat, bHat, resid, ns, iter_ell] = regularized_doppler_mils(ellBar, presumed_time, snapshot_codephases_obs, snapshot_doppler_obs, sats1, Eph);
+                            [ellHat, bHat, resid, ns, iter_ell, rt] = regularized_doppler_mils(ellBar, presumed_time, snapshot_codephases_obs, snapshot_doppler_obs, sats1, Eph);
                         case 'shadow'
-                            [ellHat, bHat, betaHat, resid, nu, iter_ell] = shadowing_ls(ellBar, presumed_time, snapshot_codephases_obs, sats1, Eph);
+                            [ellHat, bHat, betaHat, resid, nu, iter_ell, rt] = shadowing_ls(ellBar, presumed_time, snapshot_codephases_obs, sats1, Eph);
                         case 'reg_mils'
-                            [ellHat, bHat, resid, ns, iter_ell] = regularized_mils(ellBar, presumed_time, snapshot_codephases_obs, sats1, Eph, 76*ones(size(sats1)));
+                            [ellHat, bHat, resid, ns, iter_ell, rt] = regularized_mils(ellBar, presumed_time, snapshot_codephases_obs, sats1, Eph, 76*ones(size(sats1)));
                     end
                 catch ME
                     if strcmp(ME.message, 'Augumented matrix is rank defficient!') || strcmp(ME.identifier,  'MATLAB:svd:matrixWithNaNInf')
@@ -161,6 +167,7 @@ for err_inx = 1:numel(posAssistErrorMags)
                     end
                 end
                 
+                rts = [rts rt];
                 fixes(ne, :) = ellHat;
                 resids(ne) = norm(resid);
                 
@@ -191,6 +198,7 @@ for err_inx = 1:numel(posAssistErrorMags)
             
             fprintf('num good fixes = %d out of %d\n', numel(abserr), n_epochs);
             fprintf('num fail ILS: %d (matrix rank deficient)\n', sum(fail_epochs));
+            fprintf('for method %s average runtime of %.3f ms\n', method_str, 1000*mean(rts));
         end
         
         title(sprintf('Initial Time Error = %.1f (s)\nInitial Position Error = %.1f (km)\nNum Satellites = %s',...

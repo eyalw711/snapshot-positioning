@@ -1,4 +1,4 @@
-function [ellHat, bHat, resid, ns, iter_ell] = regularized_doppler_mils(ellBar, presumed_time, code_phase_obs, doppler_obs, sats, Eph)
+function [ellHat, bHat, resid, ns, iter_ell, rt] = regularized_doppler_mils(ellBar, presumed_time, code_phase_obs, doppler_obs, sats, Eph)
 %REGULARIZED_DOPPLER_MILS This function calculates receiver position according to
 % the Regularized Mixed-Integer Least-Squares approach.
 %   ellBar is initial guess for receiver position (assistance)
@@ -12,6 +12,7 @@ function [ellHat, bHat, resid, ns, iter_ell] = regularized_doppler_mils(ellBar, 
 
 %%% TODO: TRY TO DETECT WHEN INTEGERS STOP UPDATING AND THEN TRY TO SOLVE
 %%% BETTER WITHOUT THE REGULARIZATION.
+tic
 
 N_UNKNOWNS = 5;
 FILTER_LOW_SATS = 1; % TODO!!!
@@ -154,67 +155,12 @@ for it = 1:niter
     
     iter_ell = [iter_ell ellHat];
 end
+resid = norm([rhs_top; rhs_bot]);
+rt = toc;
 
-
-% for it = 1:niter
-%     % Weight matrix for MILS
-%     w = zeros(2*N_sats, 1);
-%     w(1:N_sats,1)   = (1/sigmaCode) * ones(N_sats,1);
-%     w(N_sats+1:2*N_sats) = (1/sigmaA   ) * ones(N_sats,1);
-%     W = diag(w);
-%     
-%     [distances, ~, satspos] = model(ellHat, tDhat, sats, Eph); % for improving transmit times
-%     
-%     [elevs, ~] = satellite_elevations(ellHat, satspos);
-%     trops = tropospheric_model(elevs);
-%     
-%     tDhat = presumed_arrival_times - distances/c - bHat - trops/c;   % tDhat is presumed departure times
-%     correction_times = get_correction_times(tDhat, sats, Eph);
-%     
-%     [distances, J1, satspos] = model(ellHat, tDhat, sats, Eph);
-%     
-%     A_s = J1/c + [zeros(N_sats,d) ones(N_sats,1) ];
-%     B_s = -eye(N_sats)*tcode;
-%     
-%     satspos_rot = zeros(size(satspos));                              % earth rotation
-%     for s = 1:N_sats
-%         satspos_rot(:,s) = e_r_corr(distances(s)/c, satspos(:,s));
-%     end
-%     distances_rot = vecnorm(satspos_rot - ellHat)';                  % distance from rotated positions of satellites
-% 
-%     rhs = (ns + code_phase_obs)*tcode - distances_rot/c - trops/c + correction_times - bHat;
-%     
-% %     if ASSUME_HEIGHT % need at least 5 rows in the matrix for 5 variables, but can do it with 4 satellites
-% %         A_s = [A_s; [ellBar'/norm(ellBar) 0]];
-% %         rhs = [rhs; 0];
-% %     end
-% %     x = A_s \ rhs;
-%     
-%     A = [A_s; J1/c];
-%     B = [B_s; zeros(N_sats)];
-%     R = [rhs; zeros(N_sats,1)];
-%     
-%     if ASSUME_HEIGHT % need at least 5 rows in the matrix for 5 variables, but can do it with 4 satellites
-%         A = [A; [ellBar'/norm(ellBar) 0]];
-%         B = [B; zeros(1, N_sats)];
-%         R = [R; 0];
-%         fix_W = diag(W);
-%         fix_W = [fix_W; 1/sigmaCode];
-%         W = diag(fix_W);
-%     end
-%     
-%     [x, ns_corr] = smils(W*A , W*B ,W*R);
-%     ellHat = ellHat + x(1:3);
-%     bHat = bHat + x(4);
-%     ns = ns + ns_corr;
-%     
-%     iter_ell = [iter_ell ellHat];
-% end
-
-% resid = ([A_top;A_bot]*[ellHat; bHat; fdHat] + [B_top; B_bot]*ns - [rhs_top; rhs_bot]); TODO!!!
-
-[ellHat, bHat, resid, ns, iter_ell2] = regularized_mils(ellHat, presumed_time - bHat, code_phase_obs, sats, Eph, ns);
+[ellHat, bHat, resid, ns, iter_ell2, rt_nested] = regularized_mils(ellHat, presumed_time - bHat, code_phase_obs, sats, Eph, ns);
 iter_ell = [iter_ell iter_ell2];
 
+rt = rt + rt_nested;
 end
 

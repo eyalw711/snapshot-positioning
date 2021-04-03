@@ -1,4 +1,4 @@
-function [ellHat, bHat, betaHat, resid, nu, iter_ell] = shadowing_ls(ellBar, presumed_time, code_phase_obs, sats, Eph)
+function [ellHat, bHat, betaHat, resid, nu, iter_ell, rt] = shadowing_ls(ellBar, presumed_time, code_phase_obs, sats, Eph)
 %SHADOWING_LS This function calculates receiver
 %position according to the Van Diggelen's algorithm.
 %   ellBar is initial guess for receiver position (assistance)
@@ -7,6 +7,7 @@ function [ellHat, bHat, betaHat, resid, nu, iter_ell] = shadowing_ls(ellBar, pre
 %   argument.
 %   sats is the satellite SV IDs corresponding to the measurements
 %   Eph is assistance ephemeris
+tic;
 
 N_UNKNOWNS = 5;
 FILTER_LOW_SATS = 1;
@@ -111,6 +112,8 @@ for it = 1:niter
 end
 
 resid = norm(resid);
+
+rt = toc;
 
     function height_pseudo_meas(ell)
         % this adds a pseudo-measurement and a constraint that the correction
