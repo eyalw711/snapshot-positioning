@@ -18,6 +18,7 @@ colors = [...
     0.9290, 0.6940, 0.1250;...  % Y
     0.8500, 0.3250, 0.0980;...  % R
     0, 0.4470, 0.7410;...       % B
+    1 0 1;...
     ];
 
 % errors
@@ -47,7 +48,7 @@ Eph = get_eph('eph.dat');
 
 n_epochs = numel(epochs);
 
-algo_pos_errs = zeros(n_epochs, 3);
+algo_pos_errs = zeros(n_epochs, 4);
 
 drop_sats_vec = [-1];
 
@@ -71,10 +72,12 @@ for err_inx = 1:numel(posAssistErrorMags)
         
         legend_args = {};
         
-        methods = {'shadow', 'reg_mils', 'reg_dop_mils'};
+        methods = {'shadow', 'shadow-d', 'reg_mils', 'reg_dop_mils'};
         for method_inx = 1:numel(methods)
             if strcmp(methods{method_inx}, 'shadow')
                 method_str = 'Van Diggelen''s';
+            elseif strcmp(methods{method_inx}, 'shadow-d')
+                method_str = 'Fernandez Hernandez''s';
             elseif strcmp(methods{method_inx}, 'reg_mils')
                 method_str = 'MILS (A Priori Reg)';
             elseif strcmp(methods{method_inx}, 'reg_dop_mils')
@@ -153,6 +156,8 @@ for err_inx = 1:numel(posAssistErrorMags)
                     switch methods{method_inx}
                         case 'reg_dop_mils'
                             [ellHat, bHat, resid, ns, iter_ell, rt] = regularized_doppler_mils(ellBar, presumed_time, snapshot_codephases_obs, snapshot_doppler_obs, sats1, Eph);
+                        case 'shadow-d'
+                            [ellHat, bHat, resid, iter_ell, rt] = shadowing_lsd(ellBar, presumed_time, snapshot_codephases_obs, snapshot_doppler_obs, sats1, Eph);
                         case 'shadow'
                             [ellHat, bHat, betaHat, resid, nu, iter_ell, rt] = shadowing_ls(ellBar, presumed_time, snapshot_codephases_obs, sats1, Eph);
                         case 'reg_mils'

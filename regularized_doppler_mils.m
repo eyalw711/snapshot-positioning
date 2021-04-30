@@ -135,7 +135,7 @@ for it = 1:niter
     B_bot = zeros(N_sats);
     
     rhs_top = (ns + code_phase_obs)*tcode - distances_rot/c - trops/c + correction_times - bHat;
-    rhs_bot = -doppler_obs - range_rates - c*fdHat;
+    rhs_bot = -doppler_obs - range_rates - fdHat;
     
     if ASSUME_HEIGHT % need at least 5 rows in the matrix for 5 variables, but can do it with 4 satellites
         A_top = [A_top; [ellBar'/norm(ellBar) 0 0]];
@@ -158,9 +158,9 @@ end
 resid = norm([rhs_top; rhs_bot]);
 rt = toc;
 
-[ellHat, bHat, resid, ns, iter_ell2, rt_nested] = regularized_mils(ellHat, presumed_time - bHat, code_phase_obs, sats, Eph, ns);
-iter_ell = [iter_ell iter_ell2];
+%[ellHat, bHat, resid, ns, iter_ell2, rt_nested] = regularized_mils(ellHat, presumed_time - bHat, code_phase_obs, sats, Eph, ns);
+%iter_ell = [iter_ell iter_ell2];
 
-rt = rt + rt_nested;
+%rt = rt + rt_nested;
 end
 

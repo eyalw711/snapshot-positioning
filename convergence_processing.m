@@ -33,6 +33,12 @@ for file_inx = 1:numel(files_cell)
             pos_err_str = 'km';
             tim_err_div = 1;
             tim_err_str = 's';
+        elseif strcmp(alg_ids{alg_inx},'shadow-d')
+            new_alg_ids{alg_inx} = 'Fernandez Hernandez Original';
+            pos_err_div = 1000*1000;
+            pos_err_str = 'x1000 km';
+            tim_err_div = 3600;
+            tim_err_str = 'Hrs';
         elseif strcmp(alg_ids{alg_inx},'reg_mils')
             new_alg_ids{alg_inx} = 'MILS with A Priori Regularization';
             pos_err_div = 1000;

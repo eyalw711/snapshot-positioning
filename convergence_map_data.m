@@ -11,7 +11,7 @@ end
 
 tic
 
-alg_types_lib = {'shadow', 'reg_mils', 'reg_dop_mils'};
+alg_types_lib = {'shadow', 'shadow-d', 'reg_mils', 'reg_dop_mils'};
 
 assert(ismember(algo_str, alg_types_lib), 'invalid algo_str: %s', algo_str);
 
@@ -117,6 +117,8 @@ end
             switch alg_type_str
                 case 'shadow'
                     [ellHat, bHat, betaHat, resid, ~, ~] = shadowing_ls(ellBar, presumed_time, snapshot_codephases_obs, sats1, s_input.Eph);
+                case 'shadow-d'
+                    [ellHat, bHat, resid, ~, ~] = shadowing_lsd(ellBar, presumed_time, snapshot_codephases_obs, snapshot_doppler_obs, sats1, s_input.Eph);
                 case 'reg_mils'
                     [ellHat, bHat, resid, ~, ~] = regularized_mils(ellBar, presumed_time, snapshot_codephases_obs, sats1, s_input.Eph, 76*ones(size(sats1)));
                 case 'reg_dop_mils'
