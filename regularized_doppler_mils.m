@@ -39,7 +39,7 @@ niter = 3;                      % number of iterations
 d_coarse = 76.5e-3;             % average value for signal time-of-flight satellite to earth surface
 sigmaCode = 10e-9;              % code phase std
 sigmaA     = 100e3/c;
-sigmaD = 20e3/c;
+sigmaD = 1800e3/c;
 
 N_sats = numel(sats);
 
