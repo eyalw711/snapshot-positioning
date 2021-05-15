@@ -115,5 +115,10 @@ resid = norm(observed - computed);
 rt = toc;
 bHat = tcHat;
 
+% [ellHat, bHat, ~, resid, ~, iter_ell2, rt_nested] = shadowing_ls(ellHat, presumed_time - bHat, code_phase_obs, sats, Eph);
+% iter_ell = [iter_ell iter_ell2];
+% 
+% rt = rt + rt_nested;
+
 end
 

@@ -40,13 +40,14 @@ d_coarse = 76.5e-3;             % average value for signal time-of-flight satell
 sigmaCode = 10e-9;              % code phase std
 sigmaA     = 100e3/c;
 sigmaD = 1800e3/c;
+sigmaDopPerIter = [sigmaA, sigmaA, sigmaD];
 
 N_sats = numel(sats);
 
 % Weight matrix for DOP-MILS
 w = zeros(2*N_sats, 1);
 w(1:N_sats,1)   = (1/sigmaCode) * ones(N_sats,1);
-w(N_sats+1:2*N_sats) = (1/sigmaD   ) * ones(N_sats,1);
+w(N_sats+1:2*N_sats) = (1/sigmaA   ) * ones(N_sats,1);
 W = diag(w);
 
 %%%%%%%%%%%%%
@@ -102,7 +103,7 @@ for it = 1:niter
     % Weight matrix for DOP-MILS
     w = zeros(2*N_sats, 1);
     w(1:N_sats,1)   = (1/sigmaCode) * ones(N_sats,1);
-    w(N_sats+1:2*N_sats) = (1/sigmaD   ) * ones(N_sats,1);
+    w(N_sats+1:2*N_sats) = (1/sigmaDopPerIter(it)   ) * ones(N_sats,1);
     W = diag(w);
     
     [distances, ~, satspos] = model(ellHat, tDhat, sats, Eph); % for improving transmit times
@@ -158,9 +159,9 @@ end
 resid = norm([rhs_top; rhs_bot]);
 rt = toc;
 
-%[ellHat, bHat, resid, ns, iter_ell2, rt_nested] = regularized_mils(ellHat, presumed_time - bHat, code_phase_obs, sats, Eph, ns);
-%iter_ell = [iter_ell iter_ell2];
-
-%rt = rt + rt_nested;
+% [ellHat, bHat, resid, ns, iter_ell2, rt_nested] = regularized_mils(ellHat, presumed_time - bHat, code_phase_obs, sats, Eph, ns);
+% iter_ell = [iter_ell iter_ell2];
+% 
+% rt = rt + rt_nested;
 end
 

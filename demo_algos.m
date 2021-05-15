@@ -1,6 +1,7 @@
-% This scripts generates a graph of performace evaluation of the three
+% This scripts generates a graph of performace evaluation of the four
 % algorithms:
 % - Van Diggelen's Original Shadowing Algorithm
+% - Fernandez-Hernandez, Borre Algorithm
 % - MILS with A Priori Regularization
 % - MILS with Doppler Regularization
 
@@ -16,9 +17,9 @@ abc = 'abcdefghijklmnopqrstuvwxyz';
 
 colors = [...
     0.9290, 0.6940, 0.1250;...  % Y
+    0.4660 0.6740 0.1880;...    % G
     0.8500, 0.3250, 0.0980;...  % R
     0, 0.4470, 0.7410;...       % B
-    1 0 1;...
     ];
 
 % errors
@@ -72,11 +73,11 @@ for err_inx = 1:numel(posAssistErrorMags)
         
         legend_args = {};
         
-        methods = {'shadow', 'shadow-d', 'reg_mils', 'reg_dop_mils'};
+        methods = {'shadow', 'shadow_d', 'reg_mils', 'reg_dop_mils'};
         for method_inx = 1:numel(methods)
             if strcmp(methods{method_inx}, 'shadow')
                 method_str = 'Van Diggelen''s';
-            elseif strcmp(methods{method_inx}, 'shadow-d')
+            elseif strcmp(methods{method_inx}, 'shadow_d')
                 method_str = 'Fernandez Hernandez''s';
             elseif strcmp(methods{method_inx}, 'reg_mils')
                 method_str = 'MILS (A Priori Reg)';
@@ -156,7 +157,7 @@ for err_inx = 1:numel(posAssistErrorMags)
                     switch methods{method_inx}
                         case 'reg_dop_mils'
                             [ellHat, bHat, resid, ns, iter_ell, rt] = regularized_doppler_mils(ellBar, presumed_time, snapshot_codephases_obs, snapshot_doppler_obs, sats1, Eph);
-                        case 'shadow-d'
+                        case 'shadow_d'
                             [ellHat, bHat, resid, iter_ell, rt] = shadowing_lsd(ellBar, presumed_time, snapshot_codephases_obs, snapshot_doppler_obs, sats1, Eph);
                         case 'shadow'
                             [ellHat, bHat, betaHat, resid, nu, iter_ell, rt] = shadowing_ls(ellBar, presumed_time, snapshot_codephases_obs, sats1, Eph);
@@ -195,10 +196,10 @@ for err_inx = 1:numel(posAssistErrorMags)
                 semilogx(x, cdf, 'Color', colors(method_inx, :), 'LineWidth', 2);
             end
             
-            if strcmp(methods{method_inx}, 'reg_dop_mils')
+            if strcmp(methods{method_inx}, 'reg_dop_mils') || strcmp(methods{method_inx}, 'shadow_d')
                 h = xline(x(p90_inx), '--', 'Color', colors(method_inx, :), 'Label', sprintf('%.0f (m)', x(p90_inx))); % 'DisplayName', sprintf('%s p90', method_str),
                 % the following line skip the name of the previous plot from the legend
-                h.Annotation.LegendInformation.IconDisplayStyle = 'off';
+                h.Annotation.LegendInformation.IconDisplayStyle = 'off'; 
             end
             
             fprintf('num good fixes = %d out of %d\n', numel(abserr), n_epochs);

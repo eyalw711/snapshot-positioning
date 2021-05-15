@@ -1,9 +1,10 @@
-function convergence_map_data(csv_path, algo_str, n_steps, max_pos_err_str, max_time_err_str, input_file)
+function convergence_map_data_nsats(csv_path, algo_str, n_steps, max_pos_err_str, max_time_err_str, input_file)
 %CONVERGENCE_MAP runs the convergence experiment. after done, plot with
 %convergence_processing.m file
 
 rng default
 tcode = 1e-3;
+const_n_sats_epochs = 13;
 
 if nargin < 6
     input_file = 'ubx';
@@ -13,9 +14,13 @@ tic
 
 alg_types_lib = {'shadow', 'shadow_d', 'reg_mils', 'reg_dop_mils'};
 
-assert(ismember(algo_str, alg_types_lib), 'invalid algo_str: %s', algo_str);
+assert(all(ismember(algo_str, alg_types_lib)), 'invalid algo_str');
 
-alg_types = {algo_str};
+if ischar(algo_str)
+    alg_types = {algo_str};
+elseif iscell(algo_str)
+    alg_types = algo_str;
+end
 
 n_time_steps = str2num(n_steps);
 n_pos_steps = str2num(n_steps);
@@ -24,20 +29,20 @@ one_sided_time_err = linspace(0, str2num(max_time_err_str), n_time_steps);
 time_err_base = [-one_sided_time_err(end:-1:2) one_sided_time_err]; % seconds
 pos_err_mag_base = linspace(0, str2num(max_pos_err_str), n_pos_steps); % meters
 
-fprintf('running algo %s with max-time-err: %f[s], max-pos-err: %f[m]\n', algo_str, str2num(max_time_err_str), str2num(max_pos_err_str));
+% fprintf('running algo %s with max-time-err: %f[s], max-pos-err: %f[m]\n', algo_str, str2num(max_time_err_str), str2num(max_pos_err_str));
 
 n_exps = 8; % random azimuth, epoch, and sub-ms error
 n_buffer_rows = 1e3;
 col_names = {'alg', 'time', 'ecef_x', 'ecef_y', 'ecef_z', 't_err_base',...
     't_err_small', 't_err', 'pos_err_mag_base', 'pos_err_small', 'az', 't_0', 'ecef_x0',...
     'ecef_y0', 'ecef_z0', 'ell_x', 'ell_y', 'ell_z', 'bHat', 'betaHat',...
-    'resid_norm'};
+    'resid_norm', 'nsats'};
 n_cols = numel(col_names);
 n_lines_full_file = prod([numel(alg_types), numel(time_err_base), numel(pos_err_mag_base), n_exps]);
 
 tmstr = datestr(now, 'yyyy_mm_dd__HH_MM_SS');
 [path, filename, extension] = fileparts(csv_path);
-out_csv = fullfile(path, [filename '_' tmstr extension]);
+out_csv = fullfile(path, [filename '_nsats_' tmstr extension]);
 
 f = waitbar(0, 'reading input csv');
 try
@@ -53,6 +58,10 @@ try
     
     waitbar(last_percent/100, f, 'generating epochs input');
     s_input = gen_input(input_file);
+    
+    n_sats_per_epoch = arrayfun(@(e) numel(e.obs.sv), s_input.epochs);
+    s_input.epochs = s_input.epochs(n_sats_per_epoch == const_n_sats_epochs);
+    s_input.n_epochs = numel(s_input.epochs);
     
     waitbar(last_percent/100, f, sprintf('done %d%%', last_percent));
     
@@ -88,7 +97,7 @@ catch ME
 end
 
 
-    function new_row = run_algo(alg_type_str, clockBiasMag, posAssistErrorMag)
+    function new_rows = run_algo(alg_type_str, clockBiasMag, posAssistErrorMag)
         az = 360*rand;
         small_time_err = rand;
         ne = randi(s_input.n_epochs, 1);
@@ -97,6 +106,8 @@ end
         gps_time = s_input.epochs(ne).recvTOW;
         sats1 = s_input.epochs(ne).obs.sv';
         gps_codephases = s_input.epochs(ne).obs.cp';
+        
+        n_sats = numel(s_input.epochs(ne).obs.sv');
         
         % make position assistance
         small_pos_err = rand;
@@ -112,35 +123,46 @@ end
         snapshot_codephases_obs = mod(gps_codephases - axis_beta, 1);
         snapshot_doppler_obs = s_input.epochs(ne).obs.doplMS';
         
-        try
-            betaHat = 0;
-            switch alg_type_str
-                case 'shadow'
-                    [ellHat, bHat, betaHat, resid, ~, ~] = shadowing_ls(ellBar, presumed_time, snapshot_codephases_obs, sats1, s_input.Eph);
-                case 'shadow_d'
-                    [ellHat, bHat, resid, ~, ~] = shadowing_lsd(ellBar, presumed_time, snapshot_codephases_obs, snapshot_doppler_obs, sats1, s_input.Eph);
-                case 'reg_mils'
-                    [ellHat, bHat, resid, ~, ~] = regularized_mils(ellBar, presumed_time, snapshot_codephases_obs, sats1, s_input.Eph, 76*ones(size(sats1)));
-                case 'reg_dop_mils'
-                    [ellHat, bHat, resid, ~, ~] = regularized_doppler_mils(ellBar, presumed_time, snapshot_codephases_obs, snapshot_doppler_obs, sats1, s_input.Eph);
-            end
-        catch algo_me
-            if strcmp(algo_me.message, 'Augumented matrix is rank defficient!')
-                ellHat = zeros(size(ellBar));
-                bHat = 0;
-                resid = inf;
-            end
-        end
+        new_rows = [];
         
-%         col_names = {'alg', 'time', 'ecef_x', 'ecef_y', 'ecef_z', 't_err_base',...
-%             't_err_small', 't_err', 'pos_err_mag_base', 'pos_err_small', 'az', 't_0', 'ecef_x0',...
-%             'ecef_y0', 'ecef_z0', 'ell_x', 'ell_y', 'ell_z', 'bHat', 'betaHat',...
-%             'resid_norm'};
-
-        % add row
-        new_row = {alg_type_str, gps_time, s_input.gt_ecef(1), s_input.gt_ecef(2), s_input.gt_ecef(3), ...
-            clockBiasMag, small_time_err, perb_clock_bias, posAssistErrorMag, small_pos_err, az, presumed_time, ...
-            ellBar(1), ellBar(2), ellBar(3), ellHat(1), ellHat(2), ellHat(3), bHat, betaHat, resid};
+        for k_sats = 5:n_sats
+            
+            sel_inxs = randsample(n_sats, k_sats);
+            sel_sats = sats1(sel_inxs);
+            sel_cp = snapshot_codephases_obs(sel_inxs);
+            sel_dops = snapshot_doppler_obs(sel_inxs);
+            
+            try
+                betaHat = 0;
+                switch alg_type_str
+                    case 'shadow'
+                        [ellHat, bHat, betaHat, resid, ~, ~] = shadowing_ls(ellBar, presumed_time, sel_cp, sel_sats, s_input.Eph);
+                    case 'shadow_d'
+                        [ellHat, bHat, resid, ~, ~] = shadowing_lsd(ellBar, presumed_time, sel_cp, sel_dops, sel_sats, s_input.Eph);
+                    case 'reg_mils'
+                        [ellHat, bHat, resid, ~, ~] = regularized_mils(ellBar, presumed_time, sel_cp, sel_sats, s_input.Eph, 76*ones(size(sel_sats)));
+                    case 'reg_dop_mils'
+                        [ellHat, bHat, resid, ~, ~] = regularized_doppler_mils(ellBar, presumed_time, sel_cp, sel_dops, sel_sats, s_input.Eph);
+                end
+            catch algo_me
+                if strcmp(algo_me.message, 'Augumented matrix is rank defficient!')
+                    ellHat = zeros(size(ellBar));
+                    bHat = 0;
+                    resid = inf;
+                end
+            end
+            
+            %         col_names = {'alg', 'time', 'ecef_x', 'ecef_y', 'ecef_z', 't_err_base',...
+            %             't_err_small', 't_err', 'pos_err_mag_base', 'pos_err_small', 'az', 't_0', 'ecef_x0',...
+            %             'ecef_y0', 'ecef_z0', 'ell_x', 'ell_y', 'ell_z', 'bHat', 'betaHat',...
+            %             'resid_norm', 'nsats'};
+            
+            % add row
+            new_row = {alg_type_str, gps_time, s_input.gt_ecef(1), s_input.gt_ecef(2), s_input.gt_ecef(3), ...
+                clockBiasMag, small_time_err, perb_clock_bias, posAssistErrorMag, small_pos_err, az, presumed_time, ...
+                ellBar(1), ellBar(2), ellBar(3), ellHat(1), ellHat(2), ellHat(3), bHat, betaHat, resid, k_sats};
+            new_rows = [new_rows; new_row];
+        end
         
     end
 
@@ -148,12 +170,13 @@ end
         stc = table2struct(buffer_tbl);
         fid = fopen(out_csv, 'a');
         for j = 1:size(buffer_tbl, 1)
-            fprintf(fid, '%s,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f\n',...
+            fprintf(fid, '%s,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%.3f,%d\n',...
                 stc(j).alg, stc(j).time, stc(j).ecef_x, stc(j).ecef_y, stc(j).ecef_z, ...
                 stc(j).t_err_base, stc(j).t_err_small, stc(j).t_err, stc(j).pos_err_mag_base, stc(j).pos_err_small, ...
                 stc(j).az, stc(j).t_0, ...
                 stc(j).ecef_x0, stc(j).ecef_y0, stc(j).ecef_z0, stc(j).ell_x, stc(j).ell_y, stc(j).ell_z, ...
-                stc(j).bHat, stc(j).betaHat, stc(j).resid_norm);
+                stc(j).bHat, stc(j).betaHat, stc(j).resid_norm, ...
+                stc(j).nsats);
         end
         fclose(fid);
         

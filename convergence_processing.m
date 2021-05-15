@@ -10,6 +10,8 @@ for file_inx = 1:numel(files_cell)
     [group, id_alg, id_time_err_base, id_pos_err_base] = findgroups(t.alg, t.t_err_base ,t.pos_err_mag_base);
     
     res_pos_err = splitapply(@(e) sum(e<1e3)/numel(e) , t.pos_err, group);
+    res_min_resid = splitapply(@(r) mean(r), t.resid_norm, group);
+    res_bHat_err = splitapply(@(r) sum(r < 20.0), abs(t.bHat - t.t_err), group);
     
     [alg_code, alg_ids] = findgroups(id_alg);
     [time_err_code, time_err_ids] = findgroups(id_time_err_base);
@@ -33,7 +35,7 @@ for file_inx = 1:numel(files_cell)
             pos_err_str = 'km';
             tim_err_div = 1;
             tim_err_str = 's';
-        elseif strcmp(alg_ids{alg_inx},'shadow-d')
+        elseif strcmp(alg_ids{alg_inx},'shadow_d') || strcmp(alg_ids{alg_inx},'shadow-d')
             new_alg_ids{alg_inx} = 'Fernandez Hernandez Original';
             pos_err_div = 1000*1000;
             pos_err_str = 'x1000 km';
