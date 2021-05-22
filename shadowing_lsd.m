@@ -8,7 +8,9 @@ function [ellHat, bHat, resid, iter_ell, rt] = shadowing_lsd(ellBar, presumed_ti
 %   sats is the satellite SV IDs corresponding to the measurements
 %   Eph is assistance ephemeris
 
-tic
+rt = struct();
+rt.total_elapsed = 0;
+rt.count = 0;
 
 N_UNKNOWNS = 5;
 FILTER_LOW_SATS = 1; % TODO!!!
@@ -70,7 +72,12 @@ end
 observed = -doppler_obs;
 computed = range_rates + fdBar;
 
+tic;
+
 x = H\(observed - computed);
+
+rt.total_elapsed = rt.total_elapsed + toc;
+rt.count = rt.count + 1;
 
 % according to x set the initial guess
 ellHat = ellBar + x(1:3);
@@ -101,9 +108,14 @@ for it = 1:niter
     
     observed = -doppler_obs;
     computed = range_rates + fdBar;
-
+    
+    tic;
+    
     x = H\(observed - computed);
-
+    
+    rt.total_elapsed = rt.total_elapsed + toc;
+    rt.count = rt.count + 1;
+    
     % according to x set the initial guess
     ellHat = ellHat + x(1:3);
     fdHat = fdHat + x(4);
@@ -112,7 +124,7 @@ for it = 1:niter
     iter_ell = [iter_ell ellHat];
 end
 resid = norm(observed - computed);
-rt = toc;
+
 bHat = tcHat;
 
 % [ellHat, bHat, ~, resid, ~, iter_ell2, rt_nested] = shadowing_ls(ellHat, presumed_time - bHat, code_phase_obs, sats, Eph);

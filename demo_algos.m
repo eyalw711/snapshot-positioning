@@ -98,7 +98,7 @@ for err_inx = 1:numel(posAssistErrorMags)
             
             fail_epochs = false(n_epochs, 1);
             
-            rts = [];
+            rt_tot = [];
             rng(711); % seed randomness
             
             for ne = 1:n_epochs
@@ -173,7 +173,15 @@ for err_inx = 1:numel(posAssistErrorMags)
                     end
                 end
                 
-                rts = [rts rt];
+                if isempty(rt_tot)
+                    rt_tot = rt;
+                    rt_tot.single_count = rt.count;
+                else
+                    rt_tot.total_elapsed = rt_tot.total_elapsed + rt.total_elapsed;
+                    rt_tot.count = rt_tot.count + rt.count;
+                    rt_tot.single_count = max(rt_tot.single_count, rt.count);
+                end
+                
                 fixes(ne, :) = ellHat;
                 resids(ne) = norm(resid);
                 
@@ -204,7 +212,10 @@ for err_inx = 1:numel(posAssistErrorMags)
             
             fprintf('num good fixes = %d out of %d\n', numel(abserr), n_epochs);
             fprintf('num fail ILS: %d (matrix rank deficient)\n', sum(fail_epochs));
-            fprintf('for method %s average runtime of %.3f ms\n', method_str, 1000*mean(rts));
+            fprintf('for method %s average runtime of %.3f ms, %d per run\n',...
+                method_str,...
+                1000*(rt_tot.total_elapsed / rt_tot.count),...
+                rt_tot.single_count);
         end
         
         title(sprintf('Initial Time Error = %.1f (s)\nInitial Position Error = %.1f (km)\nNum Satellites = %s',...

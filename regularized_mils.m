@@ -10,7 +10,9 @@ function [ellHat, bHat, resid, ns, iter_ell, rt] = regularized_mils(ellBar, pres
 
 %%% TODO: TRY TO DETECT WHEN INTEGERS STOP UPDATING AND THEN TRY TO SOLVE
 %%% BETTER WITHOUT THE REGULARIZATION.
-tic
+rt = struct();
+rt.total_elapsed = 0;
+rt.count = 0;
 
 N_UNKNOWNS = 4;
 FILTER_LOW_SATS = 1; % TODO!!!
@@ -74,7 +76,12 @@ if ASSUME_HEIGHT
     W = diag(fix_W);
 end
 
+tic;
+
 [x, ns_corr] = smils(W*A , W*B ,W*R);
+
+rt.total_elapsed = rt.total_elapsed + toc;
+rt.count = rt.count + 1;
 
 % according to x and ns set the initial guess
 ellHat = ellBar + x(1:3);
@@ -124,8 +131,13 @@ for it = 1:niter
         W = diag(fix_W);
     end
     
+    tic;
+    
     [x, ns_corr] = smils(W*A , W*B ,W*R);
     
+    rt.total_elapsed = rt.total_elapsed + toc;
+    rt.count = rt.count + 1;
+
     ellHat = ellHat + x(1:3);
     bHat = bHat + x(4);
     ns = ns + ns_corr;
@@ -134,6 +146,5 @@ for it = 1:niter
 end
 
 resid = norm(R); %([A_s; J1/c]*[ellHat; bHat] + [B_s; zeros(N_sats)]*ns - [rhs; zeros(N_sats,1)]);
-rt = toc;
 end
 

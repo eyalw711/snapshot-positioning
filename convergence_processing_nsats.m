@@ -47,7 +47,7 @@ for file_inx = 1:numel(files_cell)
         end
     end
     
-    figure(1); hold on;
+    main_fig = figure; hold on;
     for alg_inx = 1:n_algs
         
         if strcmp(alg_ids{alg_inx},'shadow')
@@ -81,7 +81,7 @@ for file_inx = 1:numel(files_cell)
         end
         
         for jj = 1:n_nsats
-            figure((alg_inx - 1)*n_nsats + jj + 1);
+            figure; %((alg_inx - 1)*n_nsats + jj + 1);
             curr_portion_map = squeeze(succ_exper_map(alg_inx, jj, :, :));
             imagesc(pos_err_ids/pos_err_div, time_err_ids/tim_err_div, curr_portion_map);
             title(sprintf('%s - %d sats', new_alg_id, n_sats_ids(jj)));
@@ -90,7 +90,7 @@ for file_inx = 1:numel(files_cell)
             colorbar;
             set(gca,'FontSize',14);
         end
-        figure(1); hold on;
+        figure(main_fig); hold on;
         plot(n_sats_ids, 100*portion_per_n_sats(:, alg_inx), ...
             'Color', clr, 'LineWidth', 2, 'DisplayName', new_alg_id)
     end

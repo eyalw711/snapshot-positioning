@@ -7,7 +7,10 @@ function [ellHat, bHat, betaHat, resid, nu, iter_ell, rt] = shadowing_ls(ellBar,
 %   argument.
 %   sats is the satellite SV IDs corresponding to the measurements
 %   Eph is assistance ephemeris
-tic;
+
+rt = struct();
+rt.total_elapsed = 0;
+rt.count = 0;
 
 N_UNKNOWNS = 5;
 FILTER_LOW_SATS = 1;
@@ -61,7 +64,12 @@ if ASSUME_HEIGHT
 end
 
 % residMag(1) = norm(resid);
+tic;
+
 delta = H \ resid;
+
+rt.total_elapsed = rt.total_elapsed + toc;
+rt.count = rt.count + 1;
 
 ellHat = ellBar + delta(1:d,1);
 bHat = bBar + delta(d+1);  % [sec] shadowed - affects transmit time
@@ -102,7 +110,12 @@ for it = 1:niter
         height_pseudo_meas(ellHat);
     end
     
+    tic;
+    
     delta = H \ resid;
+    
+    rt.total_elapsed = rt.total_elapsed + toc;
+    rt.count = rt.count + 1;
     
     ellHat = ellHat + delta(1:d,1);
     bHat = bHat + delta(d+1);         % [sec] shadowed - affects transmit time
@@ -112,8 +125,6 @@ for it = 1:niter
 end
 
 resid = norm(resid);
-
-rt = toc;
 
     function height_pseudo_meas(ell)
         % this adds a pseudo-measurement and a constraint that the correction
