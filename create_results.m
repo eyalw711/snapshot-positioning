@@ -1,4 +1,6 @@
-% create all results
+% This script creates all results of the paper.
+% The input files are at https://svn.cs.tau.ac.il/stoledo/papers/snapshot-gps/article_results/
+% They should be downloaded and incompressed as a prerequisite for this script
 
 % 1. CDF figure for fix accuracy with 20km 20sec error:
 demo_algos;
